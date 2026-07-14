@@ -1,0 +1,35 @@
+version: '3'
+
+volumes:
+  pg_data:
+
+services:
+  migrate:
+      build: .
+      env_file: .env
+      depends_on:
+        db:
+          condition: service_healthy
+      command: alembic upgrade head
+      restart: "no"
+  db:
+    image: postgres:13
+    env_file: .env
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: "pg_isready -U user -d database"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  backend:
+    build: .
+    env_file: .env
+    depends_on:
+        db:
+          condition: service_healthy
+        migrate:
+          condition: service_completed_successfully
+    command: tail -f /dev/null
+    stdin_open: true
+    tty: true

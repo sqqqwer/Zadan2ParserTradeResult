@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "trade_result_parser"
+version = "0.1.0"
+dependencies = [
+    "alembic==1.18.5",
+    "python-dotenv==1.2.2",
+    "psycopg2-binary==2.9.12",
+    "SQLAlchemy==2.0.51",
+    "fake-useragent==2.2.0",
+    "requests==2.34.2",
+    "beautifulsoup4==4.15.0",
+    "pandas==2.3.3",
+    "xlrd==2.0.2"
+]
+requires-python = ">=3.10"
+readme = "README.md"
+
+[project.scripts]
+parse_spimex_oil_bulletin_all = "trade_result_parser.scripts.console_command:parse_spimex_oil_bulletin_all"
+parse_spimex_oil_bulletin_two_pages = "trade_result_parser.scripts.console_command:parse_spimex_oil_bulletin_two_pages"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["trade_result_parser*"]
+
+[tool.ruff.lint]
+extend-select = ["RUF", "I", "E", "W", "F", "UP", "B", "SIM", "PL", "TCH"]
