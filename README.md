@@ -1,0 +1,1 @@
+# Zadan2ParserTradeResult
