@@ -14,7 +14,9 @@ dependencies = [
     "requests==2.34.2",
     "beautifulsoup4==4.15.0",
     "pandas==2.3.3",
-    "xlrd==2.0.2"
+    "xlrd==2.0.2",
+    "types-psycopg2==2.9.21",
+    "pandas_stubs==2.3.3"
 ]
 requires-python = ">=3.10"
 readme = "README.md"

@@ -1,23 +1,29 @@
 import io
 from abc import ABC, abstractmethod
 from datetime import datetime
+from decimal import Decimal, InvalidOperation
+from typing import Generic, TypeVar
 
 import pandas
 from bs4 import BeautifulSoup
+from typing_extensions import override
 
+Parse_parse_input_type = TypeVar("Parse_parse_input_type")
+Parse_parse_output_type = TypeVar("Parse_parse_output_type")
 
-class Parser(ABC):
+class Parser(ABC, Generic[Parse_parse_input_type, Parse_parse_output_type]):
     @abstractmethod
-    def parse(self):
+    def parse(self, source: Parse_parse_input_type) -> Parse_parse_output_type:
         ...
 
-class SpimexOilLinkHtmlParser(Parser):
+class SpimexOilLinkHtmlParser(Parser[str, list[str]]):
     def __init__(self):
         super().__init__()
 
-    def parse(self, html_text: str) -> tuple[str]:
+    @override
+    def parse(self, html_text: str) -> list[str]:
         base_url = 'https://spimex.com'
-        result_links = []
+        result_links: list[str] = []
 
         beautiful_soup = BeautifulSoup(html_text, 'html.parser')
         a_tag_links = beautiful_soup.find_all(
@@ -27,11 +33,15 @@ class SpimexOilLinkHtmlParser(Parser):
         )
 
         for a_tag_link in a_tag_links:
+            href = a_tag_link.get('href')
+            if not isinstance(href, str):
+                continue
+
             if 'pdf' in a_tag_link['class']:
                 print(
                     'Ссылка на таблицу с датой '
                     + str(datetime.strptime(
-                        a_tag_link.get("href")[33:41], "%Y%m%d"
+                        href[33:41], "%Y%m%d"
                     ))[:10]
                     + ' имеет формат .pdf (ПРОПУЩЕНО)'
                 )
@@ -39,16 +49,35 @@ class SpimexOilLinkHtmlParser(Parser):
                 print(
                     'Ссылка на таблицу с датой '
                     + str(datetime.strptime(
-                        a_tag_link.get("href")[37:45], "%Y%m%d"
+                        href[37:45], "%Y%m%d"
                     ))[:10]
                     + ' получена'
                 )
-                result_links.append(base_url+a_tag_link.get('href'))
+                result_links.append(base_url+href)
 
         return result_links
 
-class SpimexOilXlsFileParser(Parser):
-    def parse(self, table_content: bytes) -> tuple[dict]:
+class SpimexOilXlsFileParser(
+    Parser[bytes, list[dict[str, str | int | Decimal | datetime]]]
+):
+    def _parse_decimal(self, value: str) -> Decimal:
+        value = value.strip().replace(' ', '')
+        if value == '-':
+            return Decimal('0')
+        value = value.replace(',', '.')
+
+        try:
+            return Decimal(value)
+        except InvalidOperation as error:
+            raise ValueError(
+                f'Некорректное значение для Decimal: {value}'
+            ) from error
+
+    @override
+    def parse(
+            self,
+            table_content: bytes
+        ) -> list[dict[str, str | int | Decimal | datetime]]:
         df_raw = pandas.read_excel(
             io.BytesIO(table_content),
             engine='xlrd',
@@ -56,8 +85,8 @@ class SpimexOilXlsFileParser(Parser):
             dtype=str,
             keep_default_na=False
         )
-        table_total_date: datetime = None
-        result = []
+        table_total_date: datetime | None = None
+        result: list[dict[str, str | int | Decimal | datetime]] = []
         start_parse_flag = False
         exchange_product_id_length = 11
 
@@ -71,22 +100,22 @@ class SpimexOilXlsFileParser(Parser):
                 if ('Единица измерения: Метрическая тонна' in row_values[1]):
                     start_parse_flag = True
             else:
-                current_table = dict()
+                current_table: dict[str, str | int | Decimal | datetime] = dict()
                 if (len(row_values[1]) == exchange_product_id_length):
                     current_table['exchange_product_id'] = row_values[1]
                     current_table['exchange_product_name'] = row_values[2]
                     current_table['delivery_basis_name'] = row_values[3]
 
-                    current_table['volume'] = \
-                    0 if row_values[4] == '-' else int(row_values[4])
-
-                    current_table['total'] = \
-                    0 if row_values[5] == '-' else int(row_values[5])
+                    current_table['volume'] = self._parse_decimal(row_values[4])
+                    current_table['total'] = self._parse_decimal(row_values[5])
 
                     current_table['count'] = \
                     0 if row_values[12] == '-' else int(row_values[12])
 
-                    current_table['date'] = table_total_date
+                    if (table_total_date is not None):
+                        current_table['date'] = table_total_date
+                    else:
+                        continue
 
                     result.append(current_table)
 

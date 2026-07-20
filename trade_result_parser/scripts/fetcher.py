@@ -1,12 +1,16 @@
 import time
 from abc import ABC, abstractmethod
 from collections.abc import Iterator
+from dataclasses import dataclass
+from typing import Generic, TypeVar
 
 import requests
 from fake_useragent import UserAgent
+from typing_extensions import override
 
+Fetcher_configure_input_type = TypeVar("Fetcher_configure_input_type")
 
-class Fetcher(ABC):
+class Fetcher(ABC, Generic[Fetcher_configure_input_type]):
 
     def __init__(self, session: requests.Session):
         self.user_agent = UserAgent()
@@ -15,20 +19,20 @@ class Fetcher(ABC):
         self.request_session = session
         self.request_session.headers.update(self._generate_header())
 
-        self.failed_url = set()
+        self.failed_url: set = set()
 
-    def fetch(self, max_retries=3) -> Iterator[requests.Response]:
+    def fetch(self, max_retries=3) -> Iterator[requests.Response | None]:
         for response in self._fetch_generator(max_retries=max_retries):
             if (response is None):
                 self.failed_url.add(self.current_url)
             yield response
 
     @abstractmethod
-    def configure(self) -> None:
+    def configure(self, config: Fetcher_configure_input_type) -> None:
         ...
 
     @abstractmethod
-    def _fetch_generator(self, max_retries: int) -> Iterator[requests.Response]:
+    def _fetch_generator(self, max_retries: int) -> Iterator[requests.Response | None]:
         ...
 
     @abstractmethod
@@ -43,7 +47,7 @@ class Fetcher(ABC):
             for url in self.failed_url:
                 print(url)
 
-    def _fetch_one_url(self, url: str, max_retries: int) -> requests.Response:
+    def _fetch_one_url(self, url: str, max_retries: int) -> requests.Response | None:
         for current_try in range(1, max_retries+1):
             try:
                 time.sleep(1)
@@ -108,18 +112,25 @@ class Fetcher(ABC):
         }
         return header
 
-class SpimexOilHtmlPageFetcher(Fetcher):
+@dataclass(frozen=True)
+class SpimexOilHtmlPageFetcherConfig:
+    fetch_pages_start: int
+    fetch_pages_end: int
+
+class SpimexOilHtmlPageFetcher(Fetcher[SpimexOilHtmlPageFetcherConfig]):
 
     def __init__(self, session: requests.Session):
         super().__init__(session=session)
         self.fetch_pages_start = 1
         self.fetch_pages_end = 90
 
-    def configure(self, fetch_pages_start: int, fetch_pages_end: int) -> None:
-        self.fetch_pages_start = fetch_pages_start
-        self.fetch_pages_end = fetch_pages_end
+    @override
+    def configure(self, config: SpimexOilHtmlPageFetcherConfig) -> None:
+        self.fetch_pages_start = config.fetch_pages_start
+        self.fetch_pages_end = config.fetch_pages_end
 
-    def _fetch_generator(self, max_retries=3) -> Iterator[requests.Response]:
+    @override
+    def _fetch_generator(self, max_retries=3) -> Iterator[requests.Response | None]:
         for page in range(self.fetch_pages_start, self.fetch_pages_end+1):
             self.current_url = (
                 'https://spimex.com/markets/oil_products/trades/'
@@ -131,22 +142,26 @@ class SpimexOilHtmlPageFetcher(Fetcher):
                 max_retries=max_retries
             )
 
+    @override
     def _get_class_logger_label(self) -> str:
         return f'Страница {self.current_url}'
 
-class SpimexOilTableFetcher(Fetcher):
+class SpimexOilTableFetcher(Fetcher[list[str]]):
 
     def __init__(self, session: requests.Session):
         super().__init__(session=session)
-        self.list_table_links = []
+        self.list_table_links: list = []
 
+    @override
     def configure(self, list_table_links: list[str]) -> None:
         self.list_table_links = list_table_links
 
-    def _fetch_generator(self, max_retries=3 ) -> Iterator[requests.Response]:
+    @override
+    def _fetch_generator(self, max_retries=3 ) -> Iterator[requests.Response | None]:
         for url in self.list_table_links:
             self.current_url = url
             yield self._fetch_one_url(url, max_retries)
 
+    @override
     def _get_class_logger_label(self) -> str:
         return f'Таблица с ссылкой {self.current_url}'

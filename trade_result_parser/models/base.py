@@ -1,7 +1,7 @@
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import DeclarativeBase
 
 from .mixins import IdPrimaryKeyMixin
 
 
-class BaseModel(IdPrimaryKeyMixin, declarative_base()):
+class BaseModel(IdPrimaryKeyMixin, DeclarativeBase):
     __abstract__ = True

@@ -5,7 +5,11 @@ from sqlalchemy.exc import IntegrityError
 
 from trade_result_parser.core.database import Session as DBSession_factory
 
-from .fetcher import SpimexOilHtmlPageFetcher, SpimexOilTableFetcher
+from .fetcher import (
+    SpimexOilHtmlPageFetcher,
+    SpimexOilHtmlPageFetcherConfig,
+    SpimexOilTableFetcher,
+)
 from .loader_to_DB import BulletinLoaderToDB
 from .parser import SpimexOilLinkHtmlParser, SpimexOilXlsFileParser
 
@@ -28,8 +32,10 @@ class SpimexOilBulletinOrchestrator:
 
     def start_parse(self, start_pages=88, end_pages=89):
         self.fetcher_links_html.configure(
-            fetch_pages_start=start_pages,
-            fetch_pages_end=end_pages
+            SpimexOilHtmlPageFetcherConfig(
+                fetch_pages_start=start_pages,
+                fetch_pages_end=end_pages
+            )
         )
         for page_response in self.fetcher_links_html.fetch():
             if (page_response is None):
@@ -47,6 +53,8 @@ class SpimexOilBulletinOrchestrator:
                         parsed_xls_tables = self.table_parser_xls.parse(
                             table_xls_response.content
                         )
+                        if (len(parsed_xls_tables) == 0):
+                            continue
 
                         if (
                             parsed_xls_tables[0]['date']
