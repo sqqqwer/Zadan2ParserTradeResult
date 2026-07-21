@@ -1,5 +1,7 @@
 import requests
 
+from trade_result_parser.core.logging_config import setup_logging
+
 from .fetcher import SpimexOilHtmlPageFetcher, SpimexOilTableFetcher
 from .loader_to_DB import BulletinLoaderToDB
 from .orchestrator import SpimexOilBulletinOrchestrator
@@ -7,6 +9,8 @@ from .parser import SpimexOilLinkHtmlParser, SpimexOilXlsFileParser
 
 
 def parse_spimex_oil_bulletin_all():
+    setup_logging(level="INFO")
+
     request_session = requests.Session()
 
     orchestrator = SpimexOilBulletinOrchestrator(
@@ -23,6 +27,8 @@ def parse_spimex_oil_bulletin_all():
 
 
 def parse_spimex_oil_bulletin_two_pages():
+    setup_logging(level="INFO")
+
     request_session = requests.Session()
 
     orchestrator = SpimexOilBulletinOrchestrator(

@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 
 from psycopg2.errors import UniqueViolation
@@ -12,6 +13,8 @@ from .fetcher import (
 )
 from .loader_to_DB import BulletinLoaderToDB
 from .parser import SpimexOilLinkHtmlParser, SpimexOilXlsFileParser
+
+logger = logging.getLogger(__name__)
 
 
 class SpimexOilBulletinOrchestrator:
@@ -29,7 +32,7 @@ class SpimexOilBulletinOrchestrator:
         self.table_parser_xls = table_parser_xls
         self.loader_to_db = loader_to_db
 
-    def start_parse(self, start_pages=88, end_pages=89):
+    def start_parse(self, start_pages=88, end_pages=89):  # noqa: PLR0912
         self.fetcher_links_html.configure(
             SpimexOilHtmlPageFetcherConfig(
                 fetch_pages_start=start_pages, fetch_pages_end=end_pages
@@ -57,10 +60,12 @@ class SpimexOilBulletinOrchestrator:
                         if parsed_xls_tables[0]["date"] < datetime(
                             year=2023, month=1, day=1
                         ):
-                            print("ТАБЛИЦА РАНЬШЕ 2023 ГОДА, парсинг останавливается")
+                            logger.info(
+                                "ТАБЛИЦА РАНЬШЕ 2023 ГОДА, парсинг останавливается"
+                            )
                             break
 
-                        print(
+                        logger.info(
                             f"Таблица с датой {str(parsed_xls_tables[0]['date'])[:10]} "
                             "Скачана и распаршена"
                         )
@@ -71,12 +76,14 @@ class SpimexOilBulletinOrchestrator:
                             self.loader_to_db.load_model_item(parsed_xls_table, session)
                 except IntegrityError as exception:
                     if isinstance(exception.orig, UniqueViolation):
-                        print(
+                        logger.warning(
                             f"Таблица с датой {str(parsed_xls_tables[0]['date'])[:10]} "
                             "УЖЕ СУЩЕСТВУЕТ в базе данных"
                         )
+                except Exception:
+                    logger.exception("Произошла непредвиденная ошибка")
                 else:
-                    print(
+                    logger.info(
                         f"Таблица с датой {str(parsed_xls_tables[0]['date'])[:10]} "
                         "СОХРАНЕНА в базе данных"
                     )
@@ -84,6 +91,6 @@ class SpimexOilBulletinOrchestrator:
                 continue
             break
 
-        print(f"Парсинг страниц {start_pages}-{end_pages} завершён")
+        logger.info(f"Парсинг страниц {start_pages}-{end_pages} завершён")
         self.fetcher_links_html.print_failed_urls()
         self.fetcher_table_xls.print_failed_urls()

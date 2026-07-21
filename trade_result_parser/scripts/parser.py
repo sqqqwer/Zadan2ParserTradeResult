@@ -1,4 +1,5 @@
 import io
+import logging
 from abc import ABC, abstractmethod
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
@@ -10,6 +11,8 @@ from typing_extensions import override
 
 Parse_parse_input_type = TypeVar("Parse_parse_input_type")
 Parse_parse_output_type = TypeVar("Parse_parse_output_type")
+
+logger = logging.getLogger(__name__)
 
 
 class Parser(ABC, Generic[Parse_parse_input_type, Parse_parse_output_type]):
@@ -37,13 +40,13 @@ class SpimexOilLinkHtmlParser(Parser[str, list[str]]):
                 continue
 
             if "pdf" in a_tag_link["class"]:
-                print(
+                logger.info(
                     "Ссылка на таблицу с датой "
                     + str(datetime.strptime(href[33:41], "%Y%m%d"))[:10]
                     + " имеет формат .pdf (ПРОПУЩЕНО)"
                 )
             elif "xls" in a_tag_link["class"]:
-                print(
+                logger.info(
                     "Ссылка на таблицу с датой "
                     + str(datetime.strptime(href[37:45], "%Y%m%d"))[:10]
                     + " получена"

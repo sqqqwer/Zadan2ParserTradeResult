@@ -1,6 +1,6 @@
 .PHONY: help install docker-up run-twopages run-allpages format lint ruff check clean
 
-help:			## Установить зависимости
+help:			## Все команды
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "  %-12s %s\n", $$1, $$2}'
 

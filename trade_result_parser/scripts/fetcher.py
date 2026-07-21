@@ -1,3 +1,4 @@
+import logging
 import time
 from abc import ABC, abstractmethod
 from collections.abc import Iterator
@@ -9,6 +10,8 @@ from fake_useragent import UserAgent
 from typing_extensions import override
 
 Fetcher_configure_input_type = TypeVar("Fetcher_configure_input_type")
+
+logger = logging.getLogger(__name__)
 
 
 class Fetcher(ABC, Generic[Fetcher_configure_input_type]):
@@ -43,9 +46,9 @@ class Fetcher(ABC, Generic[Fetcher_configure_input_type]):
         failed_urls_count = len(self.failed_url)
 
         if failed_urls_count > 0:
-            print(f"Не обработано {failed_urls_count} ссылок:")
+            logger.warning(f"Не обработано {failed_urls_count} ссылок:")
             for url in self.failed_url:
-                print(url)
+                logger.warning(url)
 
     def _fetch_one_url(self, url: str, max_retries: int) -> requests.Response | None:
         for current_try in range(1, max_retries + 1):
@@ -57,42 +60,44 @@ class Fetcher(ABC, Generic[Fetcher_configure_input_type]):
                 )
                 response.raise_for_status()
                 return response
-            except (requests.ConnectionError, requests.Timeout) as exception:
+            except (requests.ConnectionError, requests.Timeout):
                 wait_time = 3 * current_try
-                print(
-                    self._get_class_logger_label() + f"Исключение: {exception}, "
-                    f"Попытка:{current_try}/{max_retries} ждем {wait_time}с"
+                logger.warning(
+                    self._get_class_logger_label()
+                    + f" Попытка:{current_try}/{max_retries} ждем {wait_time}с"
                 )
                 time.sleep(wait_time)
             except requests.HTTPError:
                 if response.status_code in (404,):
-                    print(
+                    logger.warning(
                         self._get_class_logger_label()
-                        + f"Сервер вернул {response.status_code}, Пропускаем файл"
+                        + f" Сервер вернул {response.status_code}, Пропускаем файл"
                     )
                     return None
                 elif response.status_code in (429, 502, 503, 504):
                     wait_time = 3 * current_try
-                    print(
+                    logger.warning(
                         self._get_class_logger_label()
-                        + f"Сервер вернул {response.status_code}, "
+                        + f" Сервер вернул {response.status_code}, "
                         f"Попытка:{current_try}/{max_retries} ждем {wait_time}с"
                     )
                     time.sleep(wait_time)
                 else:
-                    print(
+                    logger.warning(
                         self._get_class_logger_label()
-                        + f"Cервер вернул {response.status_code}, Пропускаем файл"
+                        + f" Cервер вернул {response.status_code}, Пропускаем файл"
                     )
-                    print(url)
+                    logger.error(url)
                     return None
-            except Exception as exception:
-                print(
+            except Exception:
+                logger.exception(
                     self._get_class_logger_label()
-                    + f"Неизвестное исключение: {exception}, Пропускаем файл"
+                    + " Неизвестное исключение, Пропускаем файл"
                 )
                 return None
-        print(self._get_class_logger_label() + "Исчерпаны все попытки, Пропускаем файл")
+        logger.warning(
+            self._get_class_logger_label() + " Исчерпаны все попытки, Пропускаем файл"
+        )
         return None
 
     def _generate_header(self) -> dict:
