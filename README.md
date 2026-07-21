@@ -13,13 +13,13 @@ cd Zadan2ParserTradeResult/
 
 - Поднимите контейнеры
 ```shell
-docker-compose up -d
+make docker-up
 ```
 - Распарсить 2 страницы (50-51)
 ```shell
-docker-compose exec backend parse_spimex_oil_bulletin_two_pages
+make run-twopages
 ```
 - Распарсить всё
 ```shell
-docker-compose exec backend parse_spimex_oil_bulletin_all
+make run-allpages
 ```

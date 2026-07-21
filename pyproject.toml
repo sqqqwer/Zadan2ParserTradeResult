@@ -1,25 +1,24 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
 
 [project]
-name = "trade_result_parser"
+name = "trade-result-parser"
 version = "0.1.0"
-dependencies = [
-    "alembic==1.18.5",
-    "python-dotenv==1.2.2",
-    "psycopg2-binary==2.9.12",
-    "SQLAlchemy==2.0.51",
-    "fake-useragent==2.2.0",
-    "requests==2.34.2",
-    "beautifulsoup4==4.15.0",
-    "pandas==2.3.3",
-    "xlrd==2.0.2",
-    "types-psycopg2==2.9.21",
-    "pandas_stubs==2.3.3"
-]
-requires-python = ">=3.10"
+description = ""
 readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "sqlalchemy (>=2.0.51,<3.0.0)",
+    "psycopg2-binary (>=2.9.12,<3.0.0)",
+    "beautifulsoup4 (>=4.15.0,<5.0.0)",
+    "python-dotenv (>=1.2.2,<2.0.0)",
+    "fake-useragent (>=2.2.0,<3.0.0)",
+    "requests (>=2.34.2,<3.0.0)",
+    "pandas (==2.3.3)",
+    "xlrd (>=2.0.2,<3.0.0)",
+    "alembic (>=1.18.5,<2.0.0)",
+]
 
 [project.scripts]
 parse_spimex_oil_bulletin_all = "trade_result_parser.scripts.console_command:parse_spimex_oil_bulletin_all"
@@ -29,5 +28,15 @@ parse_spimex_oil_bulletin_two_pages = "trade_result_parser.scripts.console_comma
 where = ["."]
 include = ["trade_result_parser*"]
 
+
 [tool.ruff.lint]
 extend-select = ["RUF", "I", "E", "W", "F", "UP", "B", "SIM", "PL", "TCH"]
+ignore = ["RUF001"]
+
+[dependency-groups]
+dev = [
+    "types-psycopg2 (>=2.9.21.20260712,<3.0.0.0)",
+    "pandas-stubs (==2.3.3.260113)",
+    "ruff (==0.15.22)",
+    "pre-commit (>=4.6.0,<5.0.0)"
+]

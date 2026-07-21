@@ -8,7 +8,7 @@ from .base import BaseModel
 
 
 class Bulletin(BaseModel):
-    __tablename__ = 'bulletin'
+    __tablename__ = "bulletin"
 
     exchange_product_id: Mapped[str]
     exchange_product_name: Mapped[str]
@@ -24,12 +24,9 @@ class Bulletin(BaseModel):
     updated_on: Mapped[datetime | None] = mapped_column(onupdate=func.now())
 
     __table_args__ = (
-        CheckConstraint('count > 0', name='count_above_zero'),
-        CheckConstraint('date >= \'2023-01-01\'', name='date_from_2023'),
+        CheckConstraint("count > 0", name="count_above_zero"),
+        CheckConstraint("date >= '2023-01-01'", name="date_from_2023"),
         UniqueConstraint(
-            'exchange_product_id',
-            'date',
-            name='exchange_product_id_date_unique'
-        )
+            "exchange_product_id", "date", name="exchange_product_id_date_unique"
+        ),
     )
-
